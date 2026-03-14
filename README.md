@@ -1,126 +1,127 @@
-# xui-grpc-watchdog
+# 3x-ui-gRPC-correcting
 
-**Temporary workaround for the gRPC memory leak in 3x-ui / xray-core.**
+**Временный воркэраунд для утечки памяти gRPC в 3x-ui / xray-core.**
 
-3x-ui panels using gRPC inbounds are affected by a memory leak in xray-core that causes RAM usage to grow continuously until the server becomes unresponsive. This watchdog provides a simple, low-overhead mitigation until an upstream fix is available.
+Панели 3x-ui, использующие gRPC-инбаунды, подвержены утечке памяти в xray-core: RAM растёт непрерывно вплоть до того, что сервер перестаёт отвечать. Этот вотчдог — простое малонагрузочное решение на время, пока апстрим-фикс не появился.
 
 ---
 
-## How it works
+## Как это работает
 
-A lightweight bash script runs every minute via a `systemd` timer. It checks the current system RAM usage and, if it exceeds a configurable threshold (default: **80%**), restarts the `x-ui` service and logs the event.
+Лёгкий bash-скрипт запускается каждую минуту через `systemd`-таймер. Он проверяет текущее использование RAM и, если оно превышает настраиваемый порог (по умолчанию **80%**), перезапускает сервис `x-ui` и записывает событие в лог.
 
 ```
-systemd timer (every 1 min)
+systemd timer (каждую 1 мин)
     └─► xui-watchdog.sh
-            └─► check RAM usage
-                    └─► if > THRESHOLD → x-ui restart → log
+            └─► проверка использования RAM
+                    └─► если > THRESHOLD → x-ui restart → лог
 ```
 
-No daemons. No background processes. Just a one-shot script fired on a schedule.
+Никаких демонов. Никаких фоновых процессов. Просто одноразовый скрипт по расписанию.
 
 ---
 
-## Requirements
+## Требования
 
-- Linux with `systemd`
-- `3x-ui` installed and managed via `x-ui` CLI
-- `bash`, `free`, `awk` (standard on all distros)
+- Linux с `systemd`
+- Установленный `3x-ui`, управляемый через CLI `x-ui`
+- `bash`, `free`, `awk` (есть на всех дистрибутивах по умолчанию)
 
 ---
 
-## Installation
+## Установка
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/xui-grpc-watchdog.git
-cd xui-grpc-watchdog
+git clone https://github.com/Jative/3x-ui-gRPC-correcting.git
+cd 3x-ui-gRPC-correcting
 sudo bash install.sh
 ```
 
-That's it. The timer starts immediately and survives reboots.
+Таймер запускается сразу и переживает перезагрузки.
 
 ---
 
-## Configuration
+## Настройка
 
-Open `/usr/local/bin/xui-watchdog.sh` and adjust the threshold:
+Откройте `/usr/local/bin/xui-watchdog.sh` и измените порог:
 
 ```bash
-THRESHOLD=80  # restart x-ui when RAM usage exceeds this percent
+THRESHOLD=80  # перезапуск x-ui при превышении этого процента RAM
 ```
 
-After editing, no reload is needed — the script is read fresh on every run.
+Перезагружать ничего не нужно — скрипт читается заново при каждом запуске.
 
 ---
 
-## Verify it's working
+## Проверка работы
 
-Check timer status:
+Статус таймера:
 ```bash
 systemctl status xui-watchdog.timer
 ```
 
-Watch the log:
+Просмотр лога:
 ```bash
 tail -f /var/log/xui-watchdog.log
 ```
 
-Example log output:
+Пример записи в логе:
 ```
 Sun Mar 15 03:42:01 UTC 2026: RAM 83% > 80%, restarting x-ui
 ```
 
-List all systemd timers including this one:
+Список всех активных таймеров:
 ```bash
 systemctl list-timers xui-watchdog.timer
 ```
 
 ---
 
-## Uninstall
+## Удаление
 
 ```bash
 sudo bash uninstall.sh
 ```
 
-The log file at `/var/log/xui-watchdog.log` is preserved.
+Лог-файл `/var/log/xui-watchdog.log` при этом сохраняется.
 
 ---
 
-## File structure
+## Структура файлов
 
 ```
-xui-grpc-watchdog/
+3x-ui-gRPC-correcting/
 ├── install.sh
 ├── uninstall.sh
 ├── scripts/
-│   └── xui-watchdog.sh       # main watchdog script
+│   └── xui-watchdog.sh       # основной скрипт вотчдога
 └── systemd/
-    ├── xui-watchdog.service   # oneshot service unit
-    └── xui-watchdog.timer     # 1-minute interval timer
+    ├── xui-watchdog.service   # oneshot-юнит сервиса
+    └── xui-watchdog.timer     # таймер с интервалом 1 минута
 ```
 
 ---
 
-## Background
+## Предыстория
 
-The gRPC memory leak is a known issue in xray-core. Tracking issues:
-- [xray-core #4097](https://github.com/XTLS/Xray-core/issues/4097) *(update with actual issue link)*
-- [3x-ui discussions](https://github.com/MHSanaei/3x-ui/discussions)
+Утечка памяти gRPC — известная проблема в xray-core. Связанные issues:
+- [xray-core #4097](https://github.com/XTLS/Xray-core/issues/4097) *(уточните ссылку если знаете точный номер)*
+- [Обсуждения 3x-ui](https://github.com/MHSanaei/3x-ui/discussions)
 
-This repository will be archived or marked obsolete once the upstream issue is resolved. If you know the correct issue links, feel free to open a PR.
-
----
-
-## Contributing
-
-PRs welcome — especially for:
-- Per-process memory check (target only the `x-ui` / `xray` process instead of total RAM)
-- Telegram or other notification on restart
-- Correct upstream issue links
+Репозиторий будет помечен как устаревший, как только апстрим закроет проблему.
 
 ---
 
-## License
+## Идеи для развития
+
+- Проверка памяти конкретного процесса `xray` / `x-ui` вместо общего RAM — чтобы вотчдог не срабатывал на другие процессы
+- Уведомления в Telegram при каждом перезапуске
+- Настройка порога через аргумент или отдельный конфиг-файл
+
+PR приветствуются.
+
+---
+
+## Лицензия
 
 MIT
