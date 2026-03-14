@@ -1,0 +1,7 @@
+# /etc/systemd/system/xui-watchdog.service
+[Unit]
+Description=x-ui memory watchdog
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/xui-watchdog.sh

@@ -1,0 +1,10 @@
+# /etc/systemd/system/xui-watchdog.timer
+[Unit]
+Description=x-ui memory watchdog timer
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=1min
+
+[Install]
+WantedBy=timers.target
